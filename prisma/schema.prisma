@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  
+  categories  Category[]
+  questions   Question[]
+  adminUsers  AdminUser[]
+  responses   Response[]
+
+  @@map("tenants")
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  tenantId    String     @map("tenant_id")
+  name        String
+  description String?
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  questions   Question[]
+
+  @@map("categories")
+}
+
+model Question {
+  id           String     @id @default(cuid())
+  categoryId   String     @map("category_id")
+  tenantId     String     @map("tenant_id")
+  questionText String     @map("question_text")
+  questionType String     @map("question_type") // 'multiple_choice', 'free_text', 'rating', 'yes_no'
+  options      Json?      // For multiple choice questions: ["Option 1", "Option 2", ...]
+  isRequired   Boolean    @default(false) @map("is_required")
+  isActive     Boolean    @default(true) @map("is_active")
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  responses    Response[]
+
+  @@map("questions")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  personId  String   @map("person_id") // The person ID from Kolayik
+  name      String?  // Optional: to store the admin's name for reference
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, personId])
+  @@map("admin_users")
+}
+
+model Response {
+  id           String   @id @default(cuid())
+  questionId   String   @map("question_id")
+  tenantId     String   @map("tenant_id")
+  personId     String   @map("person_id") // The person ID from Kolayik
+  personName   String?  @map("person_name") // Optional: store person's name
+  answerValue  String   @map("answer_value") // Can be text, number, or JSON string
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  question     Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, personId])
+  @@map("responses")
+}

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey App Test - Parent Window</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0051cc;
+        }
+        button.secondary {
+            background: #666;
+        }
+        button.secondary:hover {
+            background: #444;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0070f3;
+        }
+        .status {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        iframe {
+            width: 100%;
+            height: 800px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #0070f3;
+            padding-left: 10px;
+        }
+        .user-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-selector label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Survey App Test Environment</h1>
+        <p>Bu sayfa survey app'i test etmek için kullanılır. Aşağıdaki iframe Kolayik parent window'unu simüle eder.</p>
+    </div>
+
+    <div class="info">
+        <strong>ℹ️ Test Bilgisi:</strong><br>
+        Veritabanında seed verisi bulunmalıdır. <code>npm run db:seed</code> komutunu çalıştırın.<br>
+        Admin kullanıcı ile giriş yaparsanız "Sonuçlar" sekmesini göreceksiniz.
+    </div>
+
+    <div class="controls">
+        <div class="user-selector">
+            <label for="userType">Kullanıcı Tipi:</label>
+            <select id="userType">
+                <option value="admin">Admin User (person-admin-456)</option>
+                <option value="user">Normal User (person-user-789)</option>
+            </select>
+        </div>
+        <button id="sendData">📤 Veri Gönder</button>
+        <button id="refreshIframe" class="secondary">🔄 Iframe'i Yenile</button>
+        <button id="clearLog" class="secondary">🗑️ Log'u Temizle</button>
+    </div>
+
+    <div id="status"></div>
+
+    <iframe 
+        id="surveyFrame"
+        src="http://localhost:3000?app=http://localhost:8080"
+        title="Survey App">
+    </iframe>
+
+    <div class="log" id="log"></div>
+
+    <script>
+        const iframe = document.getElementById('surveyFrame');
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        const userTypeSelect = document.getElementById('userType');
+
+        function addLog(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${time}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showStatus(message, isSuccess = true) {
+            statusDiv.innerHTML = `<div class="status ${isSuccess ? 'success' : 'info'}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        // Listen for messages from iframe
+        window.addEventListener('message', function(event) {
+            if (event.origin !== 'http://localhost:3000') {
+                addLog(`⚠️ Ignored message from unknown origin: ${event.origin}`);
+                return;
+            }
+            
+            try {
+                const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                
+                if (data.isReady) {
+                    addLog('✅ Iframe hazır sinyali alındı');
+                    showStatus('✅ Iframe hazır! Veri gönderebilirsiniz.', false);
+                    
+                    // Auto-send data after 1 second
+                    setTimeout(() => {
+                        sendDataToIframe();
+                    }, 1000);
+                } else {
+                    addLog('📨 Iframe\'den mesaj alındı: ' + JSON.stringify(data));
+                }
+            } catch (e) {
+                addLog('⚠️ Mesaj parse edilemedi: ' + e.message);
+            }
+        });
+
+        function sendDataToIframe() {
+            const userType = userTypeSelect.value;
+            const data = {
+                tenantID: "tenant-test-123",
+                personID: userType === 'admin' ? "person-admin-456" : "person-user-789",
+                personName: userType === 'admin' ? "Admin User" : "Test User",
+                fullName: userType === 'admin' ? "Admin User" : "Test User",
+                bearerToken: "test-bearer-token-123"
+            };
+
+            try {
+                iframe.contentWindow.postMessage(
+                    JSON.stringify(data),
+                    'http://localhost:3000'
+                );
+                addLog('📤 Veri iframe\'e gönderildi: ' + JSON.stringify(data, null, 2));
+                showStatus(`✅ ${userType === 'admin' ? 'Admin' : 'Normal'} kullanıcı verisi gönderildi!`);
+            } catch (e) {
+                addLog('❌ Veri gönderilemedi: ' + e.message);
+                showStatus('❌ Veri gönderilemedi!', false);
+            }
+        }
+
+        function refreshIframe() {
+            iframe.src = iframe.src;
+            addLog('🔄 Iframe yenilendi');
+            showStatus('🔄 Iframe yenilendi', false);
+        }
+
+        function clearLog() {
+            logDiv.innerHTML = '';
+            addLog('🗑️ Log temizlendi');
+        }
+
+        // Event listeners
+        document.getElementById('sendData').addEventListener('click', sendDataToIframe);
+        document.getElementById('refreshIframe').addEventListener('click', refreshIframe);
+        document.getElementById('clearLog').addEventListener('click', clearLog);
+
+        // Initial log
+        addLog('🚀 Test ortamı başlatıldı');
+        addLog('⏳ Iframe yükleniyor...');
+    </script>
+</body>
+</html>
+
