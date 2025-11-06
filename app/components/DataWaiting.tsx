@@ -14,11 +14,15 @@ export default function DataWaiting() {
   const appURL = searchParams.get('app')
 
   const handleMessage = useCallback(async (event: MessageEvent) => {
-    // Security check
-    if (appURL && event.origin !== appURL) {
-      console.warn("Güvensiz mesaj:", event.origin)
+    // Security check - allow file:// origin for local testing
+    const isLocalOrigin = event.origin === 'file://' || event.origin === 'null' || event.origin === ''
+    
+    if (appURL && event.origin !== appURL && !isLocalOrigin) {
+      console.warn("Güvensiz mesaj:", event.origin, "Expected:", appURL)
       return
     }
+
+    console.log("📨 Message received from:", event.origin, "Data:", event.data)
 
     if (!event.isTrusted) {
       console.warn("Güvenilmeyen mesaj")
@@ -27,6 +31,7 @@ export default function DataWaiting() {
 
     try {
       const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+      console.log("📦 Parsed data:", data)
 
       // Check for required fields
       if (!data.tenantID || !data.personID) {

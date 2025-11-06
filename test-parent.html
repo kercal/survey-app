@@ -137,7 +137,7 @@
 
     <iframe 
         id="surveyFrame"
-        src="http://localhost:3000?app=http://localhost:8080"
+        src="https://survey-app-umber.vercel.app?app=https://survey-app-umber.vercel.app"
         title="Survey App">
     </iframe>
 
@@ -168,7 +168,7 @@
 
         // Listen for messages from iframe
         window.addEventListener('message', function(event) {
-            if (event.origin !== 'http://localhost:3000') {
+            if (event.origin !== 'https://survey-app-umber.vercel.app') {
                 addLog(`⚠️ Ignored message from unknown origin: ${event.origin}`);
                 return;
             }
@@ -205,7 +205,7 @@
             try {
                 iframe.contentWindow.postMessage(
                     JSON.stringify(data),
-                    'http://localhost:3000'
+                    'https://survey-app-umber.vercel.app'
                 );
                 addLog('📤 Veri iframe\'e gönderildi: ' + JSON.stringify(data, null, 2));
                 showStatus(`✅ ${userType === 'admin' ? 'Admin' : 'Normal'} kullanıcı verisi gönderildi!`);
